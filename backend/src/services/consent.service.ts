@@ -113,12 +113,13 @@ export class ConsentService {
   /**
    * Get consent status for a phone number
    */
-  async getConsentStatus(phone_e164: string): Promise<{ success: boolean; consent?: IConsent; message: string }> {
+  async getConsentStatus(phone_e164: string): Promise<{ success: boolean; consent?: IConsent; message: string; phone: string }> {
     try {
       if (!this.validateE164(phone_e164)) {
         return {
           success: false,
-          message: 'Invalid phone number format'
+          message: 'Invalid phone number format',
+          phone: phone_e164
         };
       }
 
@@ -127,21 +128,24 @@ export class ConsentService {
       if (!consent) {
         return {
           success: true,
-          message: 'No consent record found'
+          message: 'No consent record found',
+          phone: phone_e164
         };
       }
 
       return {
         success: true,
         consent,
-        message: 'Consent status retrieved successfully'
+        message: 'Consent status retrieved successfully',
+        phone: phone_e164
       };
 
     } catch (error) {
       console.error('Error retrieving consent status:', error);
       return {
         success: false,
-        message: 'Failed to retrieve consent status'
+        message: 'Failed to retrieve consent status',
+        phone: phone_e164
       };
     }
   }

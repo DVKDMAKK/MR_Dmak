@@ -1,4 +1,5 @@
 import { api } from './config';
+import { MRFilterParams } from '../types/mr.types';
 
 export interface MRData {
   mrId: string;
@@ -47,8 +48,8 @@ export interface BulkUploadResult {
 // MR Management API functions
 export const mrApi = {
   // Get all MRs for current user
-  getAll: async (): Promise<{ success: boolean; data: MRResponse[] }> => {
-    const response = await api.get('/mrs');
+  getAll: async (params: MRFilterParams = {}): Promise<{ success: boolean; data: { mrs: MRResponse[], total: number, totalPages: number } }> => {
+    const response = await api.get('/mrs', { params });
     return response.data;
   },
 

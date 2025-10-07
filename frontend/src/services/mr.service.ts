@@ -9,6 +9,7 @@ export interface MRData {
   phone: string;
   group: string;
   comments?: string;
+  consentStatus: string;
 }
 
 class MRService {
@@ -27,7 +28,8 @@ class MRService {
         lastName: mr.lastName || '',
         phone: mr.phone || '',
         group: mr.groupName || mr.group || 'Default Group',
-        comments: mr.comments || ''
+        comments: mr.comments || '',
+        consentStatus: mr.consentStatus || 'not_requested'
       }));
     } catch (error) {
       console.error('Error loading MRs from API:', error);

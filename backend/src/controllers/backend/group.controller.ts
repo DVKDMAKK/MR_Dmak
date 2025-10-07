@@ -2,8 +2,9 @@ import { Request, Response } from 'express';
 import { MRService } from '../../services/mr.service';
 import { schemas } from '../../utils/validation';
 import logger from '../../utils/logger';
+import consentService from '../../services/consent.service';
 
-const mrService = new MRService();
+const mrService = new MRService(consentService);
 
 export class GroupController {
   /**

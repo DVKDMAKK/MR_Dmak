@@ -1,11 +1,12 @@
 import { Request, Response } from 'express';
 import { MessageService } from '../../services/message.service';
 import { MRService } from '../../services/mr.service';
+import consentService from '../../services/consent.service';
 import { getQueueStats } from '../../services/queue.service';
 import logger from '../../utils/logger';
 
 const messageService = new MessageService();
-const mrService = new MRService();
+const mrService = new MRService(consentService);
 
 export class ReportController {
   async getDashboardStats(req: any, res: Response) {

@@ -273,4 +273,82 @@ export class ExcelService {
     
     return csvContent;
   }
+
+  async generateCSVFromCursor(cursor: any, res: any, dataType: 'mr' | 'campaign' | 'template' = 'mr'): Promise<void> {
+    let headers: string[] = [];
+
+    switch (dataType) {
+      case 'mr':
+        headers = ['MR ID', 'First Name', 'Last Name', 'Phone', 'Email', 'Group', 'Consent Status', 'Comments', 'Created At'];
+        break;
+      case 'campaign':
+        headers = ['Campaign ID', 'Campaign Name', 'Template', 'Status', 'Total Recipients', 'Sent Count', 'Failed Count', 'Success Rate', 'Created At'];
+        break;
+      case 'template':
+        headers = ['Template ID', 'Name', 'Type', 'Meta Status', 'Category', 'Language', 'Created At'];
+        break;
+    }
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${dataType}-export.csv"`);
+
+    // Write headers
+    res.write(headers.join(',') + '\n');
+
+    for await (const doc of cursor) {
+      let row: any[] = [];
+      switch (dataType) {
+        case 'mr':
+          row = [
+            doc.mrId || '',
+            doc.firstName || '',
+            doc.lastName || '',
+            doc.phone || '',
+            doc.email || '',
+            doc.groupId?.groupName || doc.group?.groupName || '',
+            doc.consentStatus || 'not_requested',
+            doc.comments || '',
+            new Date(doc.createdAt).toLocaleDateString()
+          ];
+          break;
+        case 'campaign':
+          row = [
+            doc.campaignId || '',
+            doc.name || '',
+            doc.template?.name || '',
+            doc.status || '',
+            doc.progress?.total || 0,
+            doc.progress?.sent || 0,
+            doc.progress?.failed || 0,
+            `${doc.progress?.successRate || 0}%`,
+            new Date(doc.createdAt).toLocaleDateString()
+          ];
+          break;
+        case 'template':
+          row = [
+            doc.id || '',
+            doc.name || '',
+            doc.type || '',
+            doc.metaStatus || '',
+            doc.metaCategory || '',
+            doc.metaLanguage || '',
+            new Date(doc.createdAt).toLocaleDateString()
+          ];
+          break;
+      }
+      
+      // Convert to CSV format with proper escaping
+      const csvRow = row.map(cell => {
+        const cellValue = String(cell || '');
+        if (cellValue.includes(',') || cellValue.includes('"') || cellValue.includes('\n')) {
+          return `"${cellValue.replace(/"/g, '""')}"`;
+        }
+        return cellValue;
+      }).join(',') + '\n';
+
+      res.write(csvRow);
+    }
+
+    res.end();
+  }
 }

@@ -4,8 +4,9 @@ import { ExcelService } from '../../services/excel.service';
 import { schemas } from '../../utils/validation';
 import fs from 'fs';
 import logger from '../../utils/logger';
+import consentService from '../../services/consent.service';
 
-const mrService = new MRService();
+const mrService = new MRService(consentService);
 const excelService = new ExcelService();
 
 export class MRController {
@@ -323,29 +324,29 @@ export class MRController {
         filters: { groupId, search, consentStatus, sortField, sortDirection }
       });
 
-      // Get all MRs matching the current filters (no pagination for export)
-      const result = await mrService.getMRs(
+      // Set headers for CSV download
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=medical-representatives-${new Date().toISOString().split('T')[0]}.csv`);
+
+      // Use a cursor to stream data from the database
+      const cursor = mrService.getMRsCursor(
         req.user.userId,
         groupId,
         search,
-        undefined, // No limit for export
-        undefined, // No offset for export
         consentStatus,
         sortField,
         sortDirection
       );
 
-      // Generate CSV from the filtered results
-      const csvData = excelService.generateCSV(result.mrs, 'mr');
-      
-      // Set headers for CSV download
-      res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', `attachment; filename=medical-representatives-${new Date().toISOString().split('T')[0]}.csv`);
-      
-      return res.send(csvData);
+      // Use the excel service to stream the CSV data
+      await excelService.generateCSVFromCursor(cursor, res, 'mr');
+
     } catch (error: any) {
       logger.error('Failed to export MRs', { error: error.message, query: req.query });
-      return res.status(500).json({ error: error.message });
+      // If headers are not sent, send an error response
+      if (!res.headersSent) {
+        res.status(500).json({ error: error.message });
+      }
     }
   }
 }

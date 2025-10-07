@@ -4,11 +4,13 @@ import Group from '../models/Group';
 import { CreateMRForm, UpdateMRForm } from '../types/mongodb';
 import logger from '../utils/logger';
 import whatsappCloudAPIService from './whatsapp-cloud-api.service';
-import consentService from './consent.service';
+import consentService, { ConsentService } from './consent.service';
 
 export class MRService {
-  constructor() {
-    // WhatsApp Cloud API service is imported as singleton
+  private consentService: ConsentService;
+
+  constructor(consentService: ConsentService) {
+    this.consentService = consentService;
   }
 
   /**
@@ -264,27 +266,20 @@ export class MRService {
 
       const total = await MedicalRepresentative.countDocuments(query);
 
-      // Fetch consent status for each MR
-      let mrsWithConsent = await Promise.all(
-        mrs.map(async (mr) => {
-          try {
-            const phoneE164 = this.formatPhoneForConsent(mr.phone);
-            const consentResult = await consentService.getConsentStatus(phoneE164);
-            const consentStatus = this.determineConsentStatus(consentResult.consent);
+      // Fetch consent status for all MRs in a single batch
+      const mrsWithPhone = mrs.filter(mr => mr.phone);
+      const consentPromises = mrsWithPhone.map(mr => {
+        const formattedPhone = this.formatPhoneForConsent(mr.phone!);
+        return this.consentService.getConsentStatus(formattedPhone);
+      });
+      const consentResults = await Promise.all(consentPromises);
 
-            return {
-              ...mr.toObject(),
-              consentStatus
-            };
-          } catch (error) {
-            logger.warn('Failed to fetch consent status for MR', { mrId: mr._id, phone: mr.phone, error });
-            return {
-              ...mr.toObject(),
-              consentStatus: 'not_requested' as const
-            };
-          }
-        })
-      );
+      const consentStatusMap = new Map(consentResults.map((cs: { success: boolean; consent?: any; message: string; phone: string }) => [cs.phone, this.determineConsentStatus(cs.consent)]));
+
+      let mrsWithConsent = mrs.map(mr => ({
+        ...mr.toObject(),
+        consentStatus: consentStatusMap.get(this.formatPhoneForConsent(mr.phone)) || 'not_requested'
+      }));
 
       // Filter by consent status if specified
       if (consentStatus) {
@@ -353,18 +348,27 @@ export class MRService {
 
   async getGroups(userId: string) {
     try {
-      const groups = await Group.find({ createdBy: userId });
-
-      // Get MR count for each group
-      const groupsWithCounts = await Promise.all(
-        groups.map(async (group) => {
-          const mrCount = await MedicalRepresentative.countDocuments({ groupId: group._id });
-          return {
-            ...group.toObject(),
-            mrCount
-          };
-        })
-      );
+      const groupsWithCounts = await Group.aggregate([
+        { $match: { createdBy: new mongoose.Types.ObjectId(userId) } },
+        {
+          $lookup: {
+            from: 'medical_representatives',
+            localField: '_id',
+            foreignField: 'groupId',
+            as: 'mrs'
+          }
+        },
+        {
+          $addFields: {
+            mrCount: { $size: '$mrs' }
+          }
+        },
+        {
+          $project: {
+            mrs: 0 // Exclude the mrs array from the final output
+          }
+        }
+      ]);
 
       return groupsWithCounts;
     } catch (error) {
@@ -957,5 +961,35 @@ export class MRService {
       logger.error('Failed to search groups', { userId, query, error });
       throw error;
     }
+  }
+
+  getMRsCursor(userId: string, groupId?: string, search?: string, consentStatus?: string, sortField?: string, sortDirection?: string) {
+    const query: any = { marketingManagerId: userId };
+
+    if (groupId) {
+      query.groupId = groupId;
+    }
+
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+      query.$or = [
+        { mrId: searchRegex },
+        { firstName: searchRegex },
+        { lastName: searchRegex },
+        { phone: searchRegex },
+        { email: searchRegex }
+      ];
+    }
+
+    // This is a simplified filter. A more robust implementation would handle consent status filtering.
+
+    const sortOptions: any = {};
+    if (sortField) {
+      sortOptions[sortField] = sortDirection === 'asc' ? 1 : -1;
+    } else {
+      sortOptions.createdAt = -1; // Default sort
+    }
+
+    return MedicalRepresentative.find(query).sort(sortOptions).cursor();
   }
 }

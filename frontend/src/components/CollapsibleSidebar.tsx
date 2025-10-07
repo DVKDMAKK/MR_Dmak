@@ -42,6 +42,7 @@ const CollapsibleSidebar: React.FC<CollapsibleSidebarProps> = ({
     { name: 'Campaign Wizard', route: '/campaign-wizard', icon: Wand2 },
     { name: 'Templates', route: '/templates', icon: Layout },
     { name: 'MR Management', route: '/mrs', icon: UserCheck },
+    { name: 'Groups', route: '/groups', icon: Users },
     { name: 'Simple MR Tool', route: '/simple-mr-tool', icon: Users },
     { name: 'Consent Form', route: '/consent-form', icon: ClipboardList },
     { name: 'Super Admin', route: '/super-admin', icon: Shield },

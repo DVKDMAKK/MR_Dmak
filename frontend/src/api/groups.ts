@@ -44,8 +44,8 @@ export interface GroupActivity {
 // Groups API functions
 export const groupsApi = {
   // Get all groups for current user
-  getAll: async (): Promise<{ success: boolean; data: GroupResponse[] }> => {
-    const response = await api.get('/groups');
+  getAll: async (params?: { page?: number; limit?: number; search?: string; sortField?: string; sortDirection?: 'asc' | 'desc' }): Promise<{ success: boolean; data: GroupResponse[], total: number, page: number, limit: number, totalPages: number }> => {
+    const response = await api.get('/groups', { params });
     return response.data;
   },
 
@@ -114,6 +114,18 @@ export const groupsApi = {
     const response = await api.get(`/groups/${id}/export`, {
       responseType: 'blob',
     });
+    return response.data;
+  },
+
+  // Bulk delete groups
+  bulkDelete: async (groupIds: string[]): Promise<{ success: boolean; deletedCount: number; errors: any[] }> => {
+    const response = await api.post('/groups/bulk-delete', { groupIds });
+    return response.data;
+  },
+
+  // Move MRs to a different group
+  moveMRs: async (targetGroupId: string, mrIds: string[]): Promise<{ success: boolean; movedCount: number; errors: any[] }> => {
+    const response = await api.post(`/groups/${targetGroupId}/move-mrs`, { mrIds });
     return response.data;
   }
 };

@@ -1,4 +1,18 @@
 import { AppConfig } from '../types/common';
+import crypto from 'crypto';
+
+// Generate a secure random key for JWT if not provided
+const jwtSecret = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? '' : crypto.randomBytes(32).toString('hex'));
+
+if (process.env.NODE_ENV === 'production' && !jwtSecret) {
+  throw new Error('FATAL ERROR: JWT_SECRET is not defined in production environment.');
+}
+
+// Production origins should be strictly controlled via environment variables
+const prodOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [];
+if (process.env.NODE_ENV === 'production' && prodOrigins.length === 0) {
+  throw new Error('FATAL ERROR: ALLOWED_ORIGINS is not defined for production.');
+}
 
 export const config: AppConfig = {
   port: parseInt(process.env.PORT || '5000', 10),
@@ -9,7 +23,7 @@ export const config: AppConfig = {
   },
   
   jwt: {
-    secret: process.env.JWT_SECRET || 'your-secret-key',
+    secret: jwtSecret,
     expiresIn: process.env.JWT_EXPIRES_IN || '24h'
   },
   
@@ -21,13 +35,14 @@ export const config: AppConfig = {
   },
   
   cors: {
-    origins: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'https://mrfrontend-production.up.railway.app',
-      'https://mrfrontend-production.up.railway.app/',
-      ...(process.env.ALLOWED_ORIGINS?.split(',') || [])
-    ]
+    origins: process.env.NODE_ENV === 'production' 
+      ? prodOrigins
+      : [
+          'http://localhost:3000',
+          'http://localhost:3001',
+          'https://mrfrontend-production.up.railway.app',
+          ...prodOrigins
+        ]
   },
   
   rateLimit: {

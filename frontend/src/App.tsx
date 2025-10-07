@@ -15,6 +15,7 @@ import Templates from './pages/Templates';
 import SuperAdmin from './pages/SuperAdmin';
 import CampaignWizard from './pages/CampaignWizard';
 import ConsentFormPage from './pages/ConsentFormPage';
+import Groups from './pages/Groups';
 
 // Component to determine active page from route
 const RouteWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -127,6 +128,7 @@ function App() {
                 </RoleProtectedRoute>
               }
             />
+            <Route path="/groups" element={<Groups />} />
             
             {/* Super Admin only routes */}
             <Route

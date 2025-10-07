@@ -135,4 +135,11 @@ const messageLogSchema = new Schema<IMessageLog>({
   collection: 'message_logs'
 });
 
+// Add indexes for better query performance
+messageLogSchema.index({ campaignId: 1 });
+messageLogSchema.index({ mrId: 1 });
+messageLogSchema.index({ status: 1 });
+messageLogSchema.index({ sentAt: -1 });
+
+
 export default mongoose.model<IMessageLog>('MessageLog', messageLogSchema);

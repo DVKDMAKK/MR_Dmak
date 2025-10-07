@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../../types';
 import Campaign from '../../models/Campaign';
 import Template from '../../models/Template';
-import TemplateRecipients from '../../models/TemplateRecipients';
+import RecipientList from '../../models/RecipientList';
 import MessageLog from '../../models/MessageLog';
 import MedicalRep from '../../models/MedicalRepresentative';
 import logger from '../../utils/logger';
@@ -94,7 +94,7 @@ export class CampaignController {
         });
       }
 
-      const recipientList = await TemplateRecipients.findById(recipientListId);
+      const recipientList = await RecipientList.findById(recipientListId);
       logger.info('Recipient list found', { recipientList });
       if (!recipientList || !recipientList.isActive) {
         return res.status(404).json({
@@ -103,11 +103,11 @@ export class CampaignController {
         });
       }
 
-      // Verify the recipient list belongs to the template
+      // Validate that the recipient list is for the correct template
       if (recipientList.templateId.toString() !== templateId) {
         return res.status(400).json({
           success: false,
-          message: 'Recipient list does not belong to the specified template'
+          message: 'Recipient list is not for the specified template'
         });
       }
 
@@ -122,7 +122,7 @@ export class CampaignController {
         templateId,
         recipientListId,
         createdBy: userId,
-        totalRecipients: recipientList.recipients.length,
+        totalRecipients: recipientList.data.length,
         scheduledAt: scheduledAt ? new Date(scheduledAt) : undefined
       });
 
@@ -482,12 +482,19 @@ export class CampaignController {
       // Get campaign recipients - handle both recipient list campaigns and direct MR campaigns  
       let campaignRecipients: any[] = [];
       
-      if ((campaign as any).recipients && (campaign as any).recipients.length > 0) {
-        // Campaign has seeded recipients (after being activated)
-        campaignRecipients = (campaign as any).recipients;
-      } else if (campaign.recipientListId) {
-        // Campaign with recipient list - get from populated recipientListId
-        campaignRecipients = ((campaign.recipientListId as any).recipients || []);
+      if (campaign.recipientListId) {
+        // Campaign with recipient list - fetch from recipient list
+        const recipientList = await RecipientList.findById(campaign.recipientListId);
+        if (recipientList && recipientList.data) {
+          campaignRecipients = recipientList.data.map((recipient: any) => ({
+            mrId: recipient.mrId || recipient._id,
+            firstName: recipient.firstName,
+            lastName: recipient.lastName,
+            phone: recipient.phone,
+            groupId: recipient.groupId,
+            status: 'pending' // Default status for non-activated campaigns
+          }));
+        }
       } else if (campaign.mrIds && campaign.mrIds.length > 0) {
         // Campaign with direct MRs - fetch MRs from database
         const mrs = await MedicalRep.find({ 
@@ -1329,14 +1336,11 @@ export class CampaignController {
       // Get campaign recipients - handle both recipient list campaigns and direct MR campaigns
       let campaignRecipients: any[] = [];
       
-      if ((campaign as any).recipients && (campaign as any).recipients.length > 0) {
-        // Campaign has seeded recipients (after being activated)
-        campaignRecipients = (campaign as any).recipients;
-      } else if (campaign.recipientListId) {
+      if (campaign.recipientListId) {
         // Campaign with recipient list - fetch from recipient list
-        const recipientList = await TemplateRecipients.findById(campaign.recipientListId);
-        if (recipientList && recipientList.recipients) {
-          campaignRecipients = recipientList.recipients.map((recipient: any) => ({
+        const recipientList = await RecipientList.findById(campaign.recipientListId);
+        if (recipientList && recipientList.data) {
+          campaignRecipients = recipientList.data.map((recipient: any) => ({
             mrId: recipient.mrId || recipient._id,
             firstName: recipient.firstName,
             lastName: recipient.lastName,

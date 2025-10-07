@@ -14,6 +14,7 @@ export interface ICampaign extends Document {
   // Campaign metadata
   createdBy: mongoose.Types.ObjectId; // User who created the campaign
   status: 'pending' | 'in-progress' | 'completed' | 'failed';
+  progress: number; // Percentage of completion
   
   // Progress tracking (calculated from MessageLog)
   totalRecipients: number; // Total number of recipients in the recipient list
@@ -31,23 +32,9 @@ export interface ICampaign extends Document {
   
   createdAt: Date;
   updatedAt: Date;
-  recipients?: Array<{
-    mrId?: string;
-    phone: string;
-    firstName?: string;
-    lastName?: string;
-    groupId?: string;
-    status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
-    messageId?: string;
-    sentAt?: Date;
-    deliveredAt?: Date;
-    readAt?: Date;
-    failedAt?: Date;
-    errorMessage?: string;
-  }>;
 }
 
-const campaignSchema = new Schema<ICampaign>({
+const CampaignSchema: Schema = new Schema({
   campaignId: {
     type: String,
     required: true,
@@ -88,6 +75,12 @@ const campaignSchema = new Schema<ICampaign>({
     enum: ['pending', 'in-progress', 'completed', 'failed'],
     default: 'pending'
   },
+  progress: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100
+  },
   totalRecipients: {
     type: Number,
     default: 0
@@ -103,29 +96,6 @@ const campaignSchema = new Schema<ICampaign>({
   pendingCount: {
     type: Number,
     default: 0
-  },
-  recipients: {
-    type: [
-      new Schema({
-        mrId: { type: String, required: false },
-        phone: { type: String, required: true },
-        firstName: { type: String },
-        lastName: { type: String },
-        groupId: { type: String },
-        status: { 
-          type: String, 
-          enum: ['queued', 'pending', 'sent', 'delivered', 'read', 'failed'],
-          default: 'pending'
-        },
-        messageId: { type: String },
-        sentAt: { type: Date },
-        deliveredAt: { type: Date },
-        readAt: { type: Date },
-        failedAt: { type: Date },
-        errorMessage: { type: String }
-      }, { _id: false })
-    ],
-    default: []
   },
   scheduledAt: {
     type: Date
@@ -146,11 +116,11 @@ const campaignSchema = new Schema<ICampaign>({
 });
 
 // Indexes for efficient querying
-campaignSchema.index({ createdBy: 1, isActive: 1 });
-campaignSchema.index({ templateId: 1 });
-campaignSchema.index({ recipientListId: 1 });
-campaignSchema.index({ status: 1 });
-campaignSchema.index({ campaignId: 1 }, { unique: true });
-campaignSchema.index({ createdAt: -1 });
+CampaignSchema.index({ createdBy: 1, isActive: 1 });
+CampaignSchema.index({ templateId: 1 });
+CampaignSchema.index({ recipientListId: 1 });
+CampaignSchema.index({ status: 1 });
+CampaignSchema.index({ campaignId: 1 }, { unique: true });
+CampaignSchema.index({ createdAt: -1 });
 
-export default mongoose.model<ICampaign>('Campaign', campaignSchema);
+export default mongoose.model<ICampaign>('Campaign', CampaignSchema);

@@ -4,6 +4,8 @@ import AdvancedSearch from './AdvancedSearch';
 import MRTable from './MRTable';
 import {PaginationControls} from '../PaginationControls';
 import { useMRData, MRPaginationParams } from '../../hooks/useMRData';
+import { useMRs } from '../../hooks/useMRs';
+import MRStats from './MRStats';
 
 interface MRListProps {
   // Remove contacts from props since we're fetching them internally
@@ -140,7 +142,7 @@ const MRList: React.FC<MRListProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Advanced Search */}
+      <MRStats total={total} loading={loading} />
       <AdvancedSearch
         searchTerm={searchTerm}
         groupFilter={groupFilter}

@@ -4,6 +4,7 @@ export interface IRecipientList extends Document {
   _id: mongoose.Types.ObjectId;
   name: string;
   description?: string;
+  templateId: mongoose.Types.ObjectId; // Reference to the Template
   columns: string[]; // Array of column names like ['MR id', 'First Name', 'Last Name', '#FN', '#LN', '#Month', '#week', '#Target', '#lastmonth', '#doctor']
   data: Array<Record<string, any>>; // Array of recipient data objects
   createdBy: mongoose.Types.ObjectId; // Marketing manager who created the recipient list
@@ -21,6 +22,11 @@ const recipientListSchema = new Schema<IRecipientList>({
   description: {
     type: String,
     trim: true
+  },
+  templateId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Template',
+    required: true
   },
   columns: [{
     type: String,
